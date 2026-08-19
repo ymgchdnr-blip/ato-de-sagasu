@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>あとで探す 第4版</title>
+<style>
+body{margin:0;background:#f5f7f8;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans JP",sans-serif;color:#18202b}
+header,.box{background:white;border-bottom:1px solid #ddd}.wrap{max-width:1000px;margin:auto;padding:20px}
+h1{margin:0}.sub{color:#687386;margin-top:4px}.search{display:flex;gap:10px;margin:20px 0}.search input{flex:1;padding:14px;border:1px solid #ddd;border-radius:12px;font-size:16px}.btn{padding:12px 16px;border:0;border-radius:11px;font-weight:bold;cursor:pointer}.black{background:#111827;color:white}.blue{background:#eaf2ff;color:#185abc}
+.box{border:1px solid #ddd;border-radius:16px;padding:18px;margin:16px 0}.connect{display:flex;align-items:center;justify-content:space-between;gap:15px}.folder{background:#f3f7ff;border-radius:12px;padding:12px;margin-top:12px}
+#status{display:none;background:#e9f8ed;border:1px solid #a9ddb4;color:#176b2c;border-radius:12px;padding:12px;margin:15px 0}
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:14px}.card{background:white;border:1px solid #ddd;border-radius:14px;overflow:hidden}.thumb{height:145px;background:#eee;overflow:hidden}.thumb img{width:100%;height:100%;object-fit:cover}.body{padding:12px}.tag{display:inline-block;background:#f0f2f4;border-radius:20px;padding:4px 8px;font-size:11px;margin:3px}.empty{text-align:center;color:#777;padding:30px}
+small{color:#687386}@media(max-width:650px){.connect{display:block}.cards{grid-template-columns:1fr 1fr}.wrap{padding:14px}}
+</style>
+<link rel="manifest" href="./manifest.webmanifest">
+<meta name="theme-color" content="#111827">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="あとで探す">
+<meta name="mobile-web-app-capable" content="yes">
+
+</head>
+<body>
+<header><div class="wrap"><h1>あとで探す</h1><div class="sub">保存した情報を、あとから自然な言葉で探す</div></div></header>
+<main class="wrap">
+<div class="search"><input id="q" placeholder="例：給湯器のエラー、バッテリー、登山…"><button class="btn black" onclick="search()">検索</button></div>
+<div id="status"></div>
+
+<section class="box">
+<div class="connect"><div><h2 style="margin:0">☁️ Google Drive</h2><p style="margin:6px 0;color:#687386">3台で同じ「あとで探す」を使うための保存場所</p></div>
+<button class="btn blue" onclick="connect()">Google Driveと接続する</button></div>
+<div class="folder">📁 <b>あとで探す</b><br><small>ここを共通の保存場所として使います。</small></div>
+</section>
+
+<section class="box"><h2>📷 写真・スクショを追加</h2>
+<input id="files" type="file" accept="image/*" multiple>
+<button class="btn black" onclick="document.getElementById('files').click()">写真ライブラリから選択</button>
+<button class="btn" onclick="document.getElementById('camera').click()">📷 カメラ</button>
+<input id="camera" type="file" accept="image/*" capture="environment" style="display:none">
+<p><small>※現在は試作版のため、写真はこのブラウザ内にも一時保存されます。Google Driveへの自動保存は接続機能を追加した後に有効になります。</small></p>
+</section>
+
+<section class="box"><h2>最近保存したもの <span id="count"></span></h2><div id="cards" class="cards"></div></section>
+</main>
+<script>
+const KEY="ato_de_sagasu_v4";let items=JSON.parse(localStorage.getItem(KEY)||"[]");
+function esc(s){return String(s||"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]))}
+function render(a=items){document.getElementById("count").textContent=`（${a.length}件）`;let c=document.getElementById("cards");if(!a.length){c.innerHTML='<div class="empty">まだ保存されたものはありません。</div>';return}c.innerHTML=a.map(x=>`<div class="card"><div class="thumb"><img src="${x.img}"></div><div class="body"><b>${esc(x.title)}</b><br><small>${esc(x.date)}</small><div>${x.tags.map(t=>`<span class="tag">${esc(t)}</span>`).join("")}</div></div></div>`).join("")}
+function read(f){return new Promise(ok=>{let r=new FileReader();r.onload=()=>ok(r.result);r.readAsDataURL(f)})}
+async function add(fs){for(let f of fs){if(!f.type.startsWith("image/"))continue;items.unshift({title:f.name.replace(/\.[^.]+$/,"")||"新しい写真",date:new Date().toLocaleString("ja-JP"),tags:["未整理"],img:await read(f)})}localStorage.setItem(KEY,JSON.stringify(items));render();show("✓ 写真を保存しました。次の段階でGoogle Driveへの自動保存をつなぎます。")}
+files.onchange=e=>{add(e.target.files);e.target.value=""};camera.onchange=e=>{add(e.target.files);e.target.value=""};
+function search(){let q=document.getElementById("q").value.toLowerCase();render(q?items.filter(x=>(x.title+" "+x.tags.join(" ")).toLowerCase().includes(q)):items)}
+function show(t){let s=document.getElementById("status");s.textContent=t;s.style.display="block"}
+function connect(){show("Google Drive接続ボタンは設置しました。次の段階で、Googleの許可画面につなぎます。")}
+render();
+</script>
+<script>
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => navigator.serviceWorker.register("./sw.js"));
+}
+</script>
+
+</body></html>

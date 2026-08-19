@@ -1,0 +1,9 @@
+{
+  "name": "あとで探す",
+  "short_name": "あとで探す",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#f4f7fb",
+  "theme_color": "#111827",
+  "description": "写真やスクショをあとで探せる個人用アプリ"
+}
