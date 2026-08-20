@@ -90,7 +90,7 @@ async function add(fs){
       if(!response.ok){
         const errorText=await response.text();
         console.error(errorText);
-        show("Google Driveへの保存に失敗しました");
+         show("Google Driveへの保存に失敗しました: " + errorText);
         continue;
       }
 
@@ -107,7 +107,7 @@ async function add(fs){
       show("Google Driveの「あとで探す」に保存しました");
     }catch(error){
       console.error(error);
-      show("Google Driveへの保存中にエラーが発生しました");
+     show("Google Driveへの保存中にエラーが発生しました: " + error.message); 
     }
   }
 }
