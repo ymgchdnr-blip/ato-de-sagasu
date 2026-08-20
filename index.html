@@ -48,7 +48,30 @@ async function add(fs){for(let f of fs){if(!f.type.startsWith("image/"))continue
 files.onchange=e=>{add(e.target.files);e.target.value=""};camera.onchange=e=>{add(e.target.files);e.target.value=""};
 function search(){let q=document.getElementById("q").value.toLowerCase();render(q?items.filter(x=>(x.title+" "+x.tags.join(" ")).toLowerCase().includes(q)):items)}
 function show(t){let s=document.getElementById("status");s.textContent=t;s.style.display="block"}
-function connect(){show("Google Drive接続ボタンは設置しました。次の段階で、Googleの許可画面につなぎます。")}
+async function connect(){
+  if(!window.google){
+    const s=document.createElement("script");
+    s.src="https://accounts.google.com/gsi/client";
+    s.onload=()=>connect();
+    document.head.appendChild(s);
+    return;
+  }
+
+  const tokenClient=google.accounts.oauth2.initTokenClient({
+    client_id:"466022765272-k322tc98rl74dc8cfmhi6hp8d31gjttn.apps.googleusercontent.com",
+    scope:"https://www.googleapis.com/auth/drive.file",
+    callback:(response)=>{
+      if(response.error){
+        show("Google Driveへの接続に失敗しました");
+        return;
+      }
+      localStorage.setItem("google_drive_token",response.access_token);
+      show("Google Driveに接続しました");
+    }
+  });
+
+  tokenClient.requestAccessToken();
+}
 render();
 </script>
 <script>
