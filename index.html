@@ -41,10 +41,76 @@ small{color:#687386}@media(max-width:650px){.connect{display:block}.cards{grid-t
 </main>
 <script>
 const KEY="ato_de_sagasu_v4";let items=JSON.parse(localStorage.getItem(KEY)||"[]");
-function esc(s){return String(s||"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]))}
+const FOLDER_ID="19KgdYkBRxvrRvX628ebS2COXmpZDdYSe";  
+function esc(s){return String(s||"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]))}  
 function render(a=items){document.getElementById("count").textContent=`（${a.length}件）`;let c=document.getElementById("cards");if(!a.length){c.innerHTML='<div class="empty">まだ保存されたものはありません。</div>';return}c.innerHTML=a.map(x=>`<div class="card"><div class="thumb"><img src="${x.img}"></div><div class="body"><b>${esc(x.title)}</b><br><small>${esc(x.date)}</small><div>${x.tags.map(t=>`<span class="tag">${esc(t)}</span>`).join("")}</div></div></div>`).join("")}
 function read(f){return new Promise(ok=>{let r=new FileReader();r.onload=()=>ok(r.result);r.readAsDataURL(f)})}
-async function add(fs){for(let f of fs){if(!f.type.startsWith("image/"))continue;items.unshift({title:f.name.replace(/\.[^.]+$/,"")||"新しい写真",date:new Date().toLocaleString("ja-JP"),tags:["未整理"],img:await read(f)})}localStorage.setItem(KEY,JSON.stringify(items));render();show("✓ 写真を保存しました。次の段階でGoogle Driveへの自動保存をつなぎます。")}
+async function add(fs){
+  const token=localStorage.getItem("google_drive_token");
+  if(!token){
+    show("先に「Google Driveと接続する」を押してください");
+    return;
+  }
+
+  for(let f of fs){
+    if(!f.type.startsWith("image/")) continue;
+
+    try{
+      const metadata={
+        name:f.name,
+        mimeType:f.type,
+        parents:[FOLDER_ID]
+      };
+
+      const boundary="-------atoDeSagasuBoundary";
+      const body=
+        `--${boundary}\r\n`+
+        `Content-Type: application/json; charset=UTF-8\r\n\r\n`+
+        JSON.stringify(metadata)+
+        `\r\n--${boundary}\r\n`+
+        `Content-Type: ${f.type}\r\n\r\n`;
+
+      const blob=new Blob([
+        body,
+        f,
+        `\r\n--${boundary}--`
+      ],{type:`multipart/related; boundary=${boundary}`});
+
+      const response=await fetch(
+        "https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart",
+        {
+          method:"POST",
+          headers:{
+            Authorization:"Bearer "+token
+          },
+          body:blob
+        }
+      );
+
+      if(!response.ok){
+        const errorText=await response.text();
+        console.error(errorText);
+        show("Google Driveへの保存に失敗しました");
+        continue;
+      }
+
+      const result=await response.json();
+
+      items.unshift({
+        title:f.name.replace(/\.[^.]+$/,"")||"新しい写真",
+        date:new Date().toISOString(),
+        file:f.name,
+        driveFileId:result.id
+      });
+
+      render(items);
+      show("Google Driveの「あとで探す」に保存しました");
+    }catch(error){
+      console.error(error);
+      show("Google Driveへの保存中にエラーが発生しました");
+    }
+  }
+}
 files.onchange=e=>{add(e.target.files);e.target.value=""};camera.onchange=e=>{add(e.target.files);e.target.value=""};
 function search(){let q=document.getElementById("q").value.toLowerCase();render(q?items.filter(x=>(x.title+" "+x.tags.join(" ")).toLowerCase().includes(q)):items)}
 function show(t){let s=document.getElementById("status");s.textContent=t;s.style.display="block"}
@@ -59,7 +125,7 @@ async function connect(){
 
   const tokenClient=google.accounts.oauth2.initTokenClient({
     client_id:"466022765272-k322tc98rl74dc8cfmhi6hp8d31gjttn.apps.googleusercontent.com",
-    scope:"https://www.googleapis.com/auth/drive.file",
+    scope:"https://www.googleapis.com/auth/drive",
     callback:(response)=>{
       if(response.error){
         show("Google Driveへの接続に失敗しました");
