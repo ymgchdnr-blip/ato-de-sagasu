@@ -641,6 +641,8 @@ async function checkFolder(){
           headers:{
             Authorization:
               "Bearer "+accessToken
+             "Content-Type":
+    "multipart/related; boundary="+boundary
           }
         }
       );
