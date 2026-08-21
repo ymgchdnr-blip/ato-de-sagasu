@@ -811,9 +811,7 @@ async function uploadToDrive(file){
         headers:{
           Authorization:
             "Bearer "+accessToken
-         "Content-Type":
-    "multipart/related; boundary="+boundary 
-        },
+                },
 
         body:blob
       }
